@@ -1,13 +1,14 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const morgan = require('morgan');
-const path  = require('path');
-const hbs = require('express-handlebars');
-const passport = require('passport');
-const session = require('express-session');
-const connectDB = require('./config/db');
+const express       = require('express');
+const mongoose      = require('mongoose');
+const dotenv        = require('dotenv');
+const morgan        = require('morgan');
+const path          = require('path');
+const hbs           = require('express-handlebars');
+const passport      = require('passport');
+const session       = require('express-session');
+const MongoStore    = require('connect-mongo')(session);
+const connectDB     = require('./config/db');
 
-// Load config env
 dotenv.config({
     path: '.env'
 });
@@ -16,10 +17,13 @@ require('./config/passport')(passport);
 
 // Connect mongodb
 connectDB()
-    .then(()=> console.log('Mongo Connection Successful'))
+    .then(() => console.log('Mongo Connection Successful'))
     .catch(err => console.error('error:', err));
 
 const app = express();
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
@@ -32,9 +36,12 @@ app.set('views', './views');
 
 // Session
 app.use(session({
-    secret: 'keyboard cat',
-    resave: false,
-    saveUninitialized: true
+    secret              : 'keyboard cat',
+    resave              : false,
+    saveUninitialized   : true,
+    store               : new MongoStore({
+        mongooseConnection: mongoose.connection
+    })
 }))
 
 // Passport
@@ -47,7 +54,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Routes
 app.use('/', require('./routes/index'));
 app.use('/auth', require('./routes/auth'));
-
+app.use('/auth', require('./routes/stories'));
 
 const PORT = process.env.PORT || 5000;
 
